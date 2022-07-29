@@ -76,6 +76,7 @@ INNER JOIN CTE_2 C2
 ON C1.company_id = C2.company_id
 WHERE C2.max_row_num < 4 OR  C2.min_row_num < 4;
 
+#c) CASE WHEN with PIVOT
 with CTE_1 AS (
 SELECT l.inferred_city,f.inferred_yearly_to,row_number () OVER (partition by l.inferred_city ORDER BY f.inferred_yearly_to asc) as 
 'max_row_num',f.inferred_yearly_from,row_number () OVER (partition by l.inferred_city ORDER BY f.inferred_yearly_from desc) as 
@@ -83,7 +84,6 @@ SELECT l.inferred_city,f.inferred_yearly_to,row_number () OVER (partition by l.i
 FROM location l
 INNER JOIN fact_salary f
 ON l.location_id = f.location_id)
-
 
 SELECT max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Los Angeles' then c1.inferred_yearly_to end) as 'Los Angeles_max_salary',
 min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Los Angeles' then c1.inferred_yearly_from end) as 'Los Angeles_min_salary',
@@ -98,9 +98,22 @@ min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Newark' then c1.inferre
 FROM CTE_1 C1
 LIMIT 1;
 
-SELECT max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Boston' then c1.inferred_yearly_to end) as 'Boston_max_salary',
-min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Boston' then c1.inferred_yearly_from end) as 'Boston_min_salary'
-FROM CTE_1 C1
-LIMIT 1;
+
+
+#g) Calculate Delta values
+
+with CTE_1 AS (
+SELECT distinct l.inferred_city,f.inferred_yearly_to,lead(f.inferred_yearly_to,1)   OVER (partition by l.inferred_city ORDER BY f.inferred_yearly_to asc) as 
+'lead_salary',lag (f.inferred_yearly_to) OVER (partition by l.inferred_city ORDER BY f.inferred_yearly_to asc) as 
+'lag_salary'
+FROM location l
+INNER JOIN fact_salary f
+ON l.location_id = f.location_id)
+
+SELECT DISTINCT C1.inferred_city, C1.inferred_yearly_to, ((C1.lead_salary-C1.inferred_yearly_to)/C1.inferred_yearly_to)*100 as 'Salary_change_perc'
+FROM CTE_1 C1;
+
+
+
 
 
