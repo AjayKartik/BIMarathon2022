@@ -56,3 +56,51 @@ select * from fact_salary
 where salary_offered NOT IN
 (select salary_offered from fact_salary);
 
+WITH CTE_1 AS (
+SELECT DISTINCT company_id,company_name
+FROM company c
+INNER JOIN location l ON c.location_id = l.location_id)
+,
+CTE_2 AS (
+SELECT DISTINCT company_id,inferred_yearly_to,row_number () OVER (ORDER BY f.inferred_yearly_to desc) as 
+'max_row_num',inferred_yearly_from,row_number () OVER (ORDER BY f.inferred_yearly_from ASC) as 
+'min_row_num'
+FROM job_description j
+INNER JOIN fact_salary f
+ON j.job_id = f.job_id
+)
+
+SELECT C1.company_id,C1.company_name,C2.inferred_yearly_to,C2.max_row_num,C2.inferred_yearly_from,C2.min_row_num
+FROM CTE_1 C1
+INNER JOIN CTE_2 C2
+ON C1.company_id = C2.company_id
+WHERE C2.max_row_num < 4 OR  C2.min_row_num < 4;
+
+with CTE_1 AS (
+SELECT l.inferred_city,f.inferred_yearly_to,row_number () OVER (partition by l.inferred_city ORDER BY f.inferred_yearly_to asc) as 
+'max_row_num',f.inferred_yearly_from,row_number () OVER (partition by l.inferred_city ORDER BY f.inferred_yearly_from desc) as 
+'min_row_num'
+FROM location l
+INNER JOIN fact_salary f
+ON l.location_id = f.location_id)
+
+
+SELECT max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Los Angeles' then c1.inferred_yearly_to end) as 'Los Angeles_max_salary',
+min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Los Angeles' then c1.inferred_yearly_from end) as 'Los Angeles_min_salary',
+max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Boston' then c1.inferred_yearly_to end) as 'Boston_max_salary',
+min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Boston' then c1.inferred_yearly_from end) as 'Boston_min_salary',
+max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Richmond' then c1.inferred_yearly_to end) as 'Richmond_max_salary',
+min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Richmond' then c1.inferred_yearly_from end) as 'Richmond_min_salary',
+max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'New York' then c1.inferred_yearly_to end) as 'New York_max_salary',
+min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'New York' then c1.inferred_yearly_from end) as 'New York_min_salary',
+max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Newark' then c1.inferred_yearly_to end) as 'Newark_max_salary',
+min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Newark' then c1.inferred_yearly_from end) as 'Newark_min_salary'
+FROM CTE_1 C1
+LIMIT 1;
+
+SELECT max(CASE WHEN c1.max_row_num = 1 AND c1.inferred_city = 'Boston' then c1.inferred_yearly_to end) as 'Boston_max_salary',
+min(CASE WHEN c1.min_row_num = 1 AND c1.inferred_city = 'Boston' then c1.inferred_yearly_from end) as 'Boston_min_salary'
+FROM CTE_1 C1
+LIMIT 1;
+
+
